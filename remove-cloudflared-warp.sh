@@ -3,6 +3,7 @@
 set -e
 
 echo "Removing cloudflared and Cloudflare WARP..."
+sudo warp-cli registration delete
 
 # Remove packages
 sudo apt remove --purge -y cloudflared cloudflare-warp
