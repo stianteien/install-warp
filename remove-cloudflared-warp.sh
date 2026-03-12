@@ -5,7 +5,9 @@ set -e
 echo "Removing cloudflared and Cloudflare WARP..."
 
 # Try to delete registration, ignore if it doesn't exist
-sudo warp-cli registration delete || true
+if command -v warp-cli >/dev/null 2>&1; then
+    sudo warp-cli registration delete || echo "No WARP registration found."
+fi
 
 # Remove packages
 sudo apt remove --purge -y cloudflared cloudflare-warp
