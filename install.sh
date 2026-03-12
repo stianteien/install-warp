@@ -2,7 +2,6 @@
 set -e
 
 echo "Detecting environment..."
-
 if grep -qi microsoft /proc/version; then
     IS_WSL=true
     echo "Running inside WSL"
@@ -11,34 +10,36 @@ else
     echo "Running on native Linux"
 fi
 
+# Detect real user when running under sudo
+if [ -n "$SUDO_USER" ]; then
+    REAL_HOME=$(getent passwd "$SUDO_USER" | cut -d: -f6)
+    REAL_USER="$SUDO_USER"
+else
+    REAL_HOME="$HOME"
+    REAL_USER="$(whoami)"
+fi
+
 CODENAME=$(lsb_release -cs)
 
 echo "Installing cloudflared..."
-
 sudo mkdir -p --mode=0755 /usr/share/keyrings
-
 curl -fsSL https://pkg.cloudflare.com/cloudflare-main.gpg \
 | sudo tee /usr/share/keyrings/cloudflare-main.gpg >/dev/null
-
 echo "deb [signed-by=/usr/share/keyrings/cloudflare-main.gpg] https://pkg.cloudflare.com/cloudflared $CODENAME main" \
 | sudo tee /etc/apt/sources.list.d/cloudflared.list
-
 sudo apt-get update
 sudo apt-get install -y cloudflared
 
 echo "Locating cloudflared..."
 CLOUDFLARED_PATH=$(command -v cloudflared)
-
 if [ -z "$CLOUDFLARED_PATH" ]; then
     echo "cloudflared not found!"
     exit 1
 fi
-
 echo "cloudflared located at: $CLOUDFLARED_PATH"
 
 echo "Configuring SSH..."
-
-SSH_DIR="$HOME/.ssh"
+SSH_DIR="$REAL_HOME/.ssh"
 SSH_CONFIG="$SSH_DIR/config"
 
 mkdir -p "$SSH_DIR"
@@ -50,26 +51,26 @@ fi
 
 if ! grep -q "^Host pgx.babelspeak.no" "$SSH_CONFIG" 2>/dev/null; then
     echo "Adding pgx.babelspeak.no SSH configuration..."
-
     cat >> "$SSH_CONFIG" <<EOF
 
 Host pgx.babelspeak.no
-    ProxyCommand $(command -v cloudflared) access ssh --hostname %h
-    User $(whoami)
+    ProxyCommand $CLOUDFLARED_PATH access ssh --hostname %h
+    User $REAL_USER
 EOF
-
 else
     echo "SSH configuration already exists."
 fi
 
-echo "Installing Cloudflare WARP..."
+# Fix ownership and permissions
+chown -R "$REAL_USER":"$REAL_USER" "$SSH_DIR"
+chmod 700 "$SSH_DIR"
+chmod 600 "$SSH_CONFIG"
 
+echo "Installing Cloudflare WARP..."
 curl -fsSL https://pkg.cloudflareclient.com/pubkey.gpg \
 | sudo gpg --yes --dearmor --output /usr/share/keyrings/cloudflare-warp-archive-keyring.gpg
-
 echo "deb [signed-by=/usr/share/keyrings/cloudflare-warp-archive-keyring.gpg] https://pkg.cloudflareclient.com/ $CODENAME main" \
 | sudo tee /etc/apt/sources.list.d/cloudflare-client.list
-
 sudo apt-get update
 sudo apt-get install -y cloudflare-warp
 
