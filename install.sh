@@ -40,25 +40,30 @@ SSH_CONFIG="$HOME/.ssh/config"
 mkdir -p "$HOME/.ssh"
 touch "$SSH_CONFIG"
 
-echo "Updating SSH config..."
+echo "Configuring SSH..."
 
-if ! grep -q "^Host pgx.babelspeak.no" "$SSH_CONFIG"; then
-cat <<EOF >> "$SSH_CONFIG"
+SSH_DIR="$HOME/.ssh"
+SSH_CONFIG="$SSH_DIR/config"
 
-Host pgx.babelspeak.no
-    ProxyCommand $CLOUDFLARED_PATH access ssh --hostname %h
-    User $(whoami)
-EOF
-    echo "SSH config added."
-else
-    echo "SSH config already exists."
+mkdir -p "$SSH_DIR"
+
+if [ ! -f "$SSH_CONFIG" ]; then
+    echo "Creating SSH config file..."
+    touch "$SSH_CONFIG"
 fi
 
-# Skip WARP on WSL because it cannot run there
-if [ "$IS_WSL" = true ]; then
-    echo "Skipping WARP install because it does not work in WSL."
-    echo "Install WARP on Windows instead."
-    exit 0
+if ! grep -q "^Host pgx.babelspeak.no" "$SSH_CONFIG" 2>/dev/null; then
+    echo "Adding pgx.babelspeak.no SSH configuration..."
+
+    cat >> "$SSH_CONFIG" <<EOF
+
+Host pgx.babelspeak.no
+    ProxyCommand $(command -v cloudflared) access ssh --hostname %h
+    User $(whoami)
+EOF
+
+else
+    echo "SSH configuration already exists."
 fi
 
 echo "Installing Cloudflare WARP..."
