@@ -36,10 +36,6 @@ fi
 
 echo "cloudflared located at: $CLOUDFLARED_PATH"
 
-SSH_CONFIG="$HOME/.ssh/config"
-mkdir -p "$HOME/.ssh"
-touch "$SSH_CONFIG"
-
 echo "Configuring SSH..."
 
 SSH_DIR="$HOME/.ssh"
