@@ -75,9 +75,9 @@ sudo apt-get update
 sudo apt-get install -y cloudflare-warp
 
 echo "Registering WARP..."
-sudo warp-cli registration new
+echo "y" | sudo warp-cli registration new
 
 echo "Connecting WARP..."
-warp-cli connect
+echo "y" | warp-cli connect
 
 echo "Setup complete!"
